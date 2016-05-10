@@ -1,11 +1,11 @@
 wczytajZrenice <- function(fold = "dane//", pattern = "_eksp_"){
   # wczytanie danych + przygotowanie ich przez wyliczenie srednich rozmiarow zrenicy w kazdym z etapow eksperymentu
-  wczytaj_dane(fold, pattern, f_agr = function(x) tmp <- x[,list(l_pupil = mean(PupilLeft, na.rm = T), r_pupil = mean(PupilRight, na.rm = T)), by = list(MediaName)] )
+  wczytajDane(fold, pattern, f_agr = function(x) tmp <- x[,list(l_pupil = mean(PupilLeft, na.rm = T), r_pupil = mean(PupilRight, na.rm = T)), by = list(MediaName)] )
 }
 
 wczytajDane <- function(fold = "dane//", pattern = "_eksp_", f_agr = function(x) x){
   # znalezienie odpowiednich plikow
-  names <- list.files("dane//", pattern = "_eksp_")
+  names <- list.files("dane//", pattern = pattern)
   for(i in names){
     show(i)
     # wczytanie z odpowiednimi ustawieniami
