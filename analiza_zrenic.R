@@ -16,3 +16,4 @@ wyniki_zrenice <- rbind(zrenice_eks, zrenice_kon, zrenice_kon_j)
 
 write.csv2(wyniki_zrenice, "wyniki//analiza_zrenic")
 
+# test
