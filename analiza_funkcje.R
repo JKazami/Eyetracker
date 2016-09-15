@@ -27,7 +27,7 @@ wczytajDane <- function(fold = "dane//", pattern = "_eksp_", f_agr = function(x)
   return(result_dt)
 }
 
-zrenicePolicz <- function(dt, grupa = "eksperyment"){
+zrenicePolicz <- function(dt, grupa = "template"){
   
   # unikatowym wpisem jest para <ktory przebieg eksperymentu; ktora czesc eksperymentu>
   dt$key <- paste0(dt$name,"|",dt$MediaName)
@@ -74,3 +74,77 @@ zrenicePolicz <- function(dt, grupa = "eksperyment"){
 oczysc <- function(dt){
   dt <- dt[]
 }
+
+
+v_nast <- function(v){
+  if(class(v) == "factor") stop("funkcja nie dziala dobrze na factorach")
+  return(c(v[2:length(v)], v[1]))
+}
+
+v_pop <- function(v){
+  if(class(v) == "factor") stop("funkcja nie dziala dobrze na factorach")
+  return(c(v[length(v)], v[1:(length(v)-1)]))
+}
+
+okresl_AOI <- function(dt){
+  
+  # okreœlenie 1 czy jest jakikolwiek AOI
+  dt$czy_AOI <- rowSums(data.frame(dt)[,grep("AOI", names(dt))], na.rm = T)
+  
+  # dodanie AOI - patrzy sie poza AOI
+  dt$AOI_nope <- 1 - dt$czy_AOI
+  
+  
+  dt[,czy_AOI := NULL]
+  show(paste0("test spojnosci danych - powinno byc 1: ",unique(rowSums(data.frame(dt)[,grep("AOI", names(dt))], na.rm = T))))
+  
+  
+  # zmiana struktury danych - jedna kolumna AOI z nazwa gdzie sie patrzyl
+  aojce <- colnames(dt)[substr(colnames(dt),1,3) == "AOI"]
+  dt <- melt.data.table(dt, id.vars = colnames(dt)[!colnames(dt)%in%aojce], variable.name = "AOI", variable.factor = F)[GazeEventType == "Fixation" & value == 1]
+  dt <- dt[order(RecordingTimestamp)]
+  
+  # czy wpis jest poczatkiem patrzenia na AOI
+  dt$start <- dt$AOI != v_pop(dt$AOI)
+  
+  # czy wpis jest ostatnim patrzenia na AOI
+  dt$koniec <- dt$AOI != v_nast(dt$AOI)
+  
+  # czy wpis jest poczatkiem/koncem zmiany nazwy medium (czesci eksperymentu)
+  dt$media <- dt$MediaName != v_pop(dt$MediaName) | dt$MediaName != v_nast(dt$MediaName) 
+  
+  # odfiltrowanie tych wierszy, które s¹ na granicach
+  dt <- dt[start + koniec + media> 0]
+  dt <- dt[order(RecordingTimestamp)]
+  
+  # poprawka na pierwszy i ostani wpis w tabeli
+  dt[1, start := T]
+  dt[.N, koniec := T]
+  
+  
+  
+  
+#  dt$LocalTimeStamp2 <- as.POSIXct(strptime(kon$LocalTimeStamp, "%H:%M:%OS"))
+  dt_se <- dt[start + koniec > 0]
+  dt_se <- dt_se[order(MediaName, RecordingTimestamp)]
+  dt_se$CzasPatrzenia_ms <- dt_se$RecordingTimestamp - v_pop(dt_se$RecordingTimestamp)
+#  dt_se$czas_patrzenia2 <- dt_se$LocalTimeStamp2 - v_pop(dt_se$LocalTimeStamp2)
+  setkey(dt_se, RecordingTimestamp)
+  dt$CzasPatrzenia_ms <- dt_se[dt$RecordingTimestamp]$CzasPatrzenia_ms
+  
+  return(dt)
+}
+
+
+statystyki_patrzenia <- function(dt, grupa = "template"){
+  result_dt <- dt[start == T, .(CzasPatrzenia_ms = sum(CzasPatrzenia_ms)), .(AOI, ParticipantName, MediaName)]
+  czas_patrzenia <- result_dt[,.(CzasPatrzenia_ms = sum(CzasPatrzenia_ms)), .(ParticipantName, MediaName)]
+  setkeyv(czas_patrzenia, c("ParticipantName", "MediaName"))
+  result_dt$CzasPatrzeniaTotal_ms <- czas_patrzenia[J(result_dt$ParticipantName, result_dt$MediaName)]$CzasPatrzenia_ms
+  result_dt$grupa <- grupa
+  return(result_dt)
+}
+
+
+
+
